@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { SimpleAuthProvider, useSimpleAuth } from './contexts/SimpleAuthContext';
-import SimpleRegisterForm from './components/SimpleRegisterForm';
-import SimpleLoginForm from './components/SimpleLoginForm';
-import SimpleDashboard from './components/SimpleDashboard';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import RegisterForm from './components/RegisterForm';
+import LoginForm from './components/LoginForm';
+import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
 import { Car, UserPlus, LogIn } from 'lucide-react';
 
 function AuthPage() {
   const [showRegister, setShowRegister] = useState(false);
-  const { user, loading } = useSimpleAuth();
+  const { profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -22,13 +22,13 @@ function AuthPage() {
   }
 
   // Si es administrador, mostrar panel de administración
-  if (user && user.userRole === 'admin') {
+  if (profile && profile.user_type === 'admin') {
     return <AdminDashboard />;
   }
 
   // Si es usuario aprobado, mostrar dashboard normal
-  if (user && user.validationStatus === 'approved' && user.isApproved) {
-    return <SimpleDashboard />;
+  if (profile && profile.validation_status === 'approved') {
+    return <Dashboard />;
   }
 
   return (
@@ -76,7 +76,7 @@ function AuthPage() {
               <p className="text-slate-600 mb-6 text-sm">
                 Completa el formulario para registrarte en la plataforma
               </p>
-              <SimpleRegisterForm onSuccess={() => setShowRegister(false)} />
+              <RegisterForm onSuccess={() => setShowRegister(false)} />
             </>
           ) : (
             <>
@@ -84,7 +84,7 @@ function AuthPage() {
               <p className="text-slate-600 mb-6 text-sm">
                 Ingresa tus credenciales para acceder a tu cuenta
               </p>
-              <SimpleLoginForm onSuccess={() => {}} />
+              <LoginForm onSuccess={() => {}} />
             </>
           )}
         </div>
@@ -102,9 +102,9 @@ function AuthPage() {
 
 function App() {
   return (
-    <SimpleAuthProvider>
+    <AuthProvider>
       <AuthPage />
-    </SimpleAuthProvider>
+    </AuthProvider>
   );
 }
 

@@ -5,7 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export type UserType = 'buyer' | 'seller';
+export type UserType = 'buyer' | 'seller' | 'admin';
 export type ValidationStatus = 'pending' | 'approved' | 'rejected';
 
 export interface UserProfile {
