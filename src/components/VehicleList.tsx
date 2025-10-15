@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { localStorageService, Vehicle } from '../lib/localStorageService';
+import * as supabaseService from '../lib/supabaseService';
 import { ArrowLeft, Search, Filter, Car, Calendar, Gauge, Fuel, Cog, Phone, Mail, Edit2, Trash2, Eye, CheckCircle } from 'lucide-react';
 
 interface VehicleListProps {
   onBack: () => void;
-  onEditVehicle: (vehicle: Vehicle) => void;
+  onEditVehicle: (vehicle: supabaseService.Vehicle) => void;
   showMyVehicles?: boolean;
 }
 
 export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = false }: VehicleListProps) {
   const { profile } = useAuth();
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [filteredVehicles, setFilteredVehicles] = useState<supabaseService.Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<supabaseService.Vehicle | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   const [filters, setFilters] = useState({
     brand: '',
@@ -23,40 +24,54 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
     minPrice: '',
     maxPrice: '',
     transmission: '',
-    fuelType: ''
+    fuel_type: ''
   });
 
   useEffect(() => {
     loadVehicles();
   }, [showMyVehicles, profile]);
 
-  const loadVehicles = () => {
-    if (showMyVehicles && profile) {
-      const myVehicles = localStorageService.getUserVehicles(profile.id);
-      setFilteredVehicles(myVehicles);
-    } else {
-      // En el catálogo público, solo mostrar vehículos aprobados para venta
-      const allVehicles = localStorageService.getVehiclesForSale();
-      setFilteredVehicles(allVehicles);
+  const loadVehicles = async () => {
+    setLoading(true);
+    try {
+      if (showMyVehicles && profile) {
+        const myVehicles = await supabaseService.getUserVehicles(profile.id);
+        setFilteredVehicles(myVehicles);
+      } else {
+        // En el catálogo público, solo mostrar vehículos aprobados para venta
+        const allVehicles = await supabaseService.getVehiclesForSale();
+        setFilteredVehicles(allVehicles);
+      }
+    } catch (error) {
+      console.error('Error loading vehicles:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    const filtered = localStorageService.searchVehicles({
-      brand: filters.brand,
-      model: filters.model,
-      minYear: filters.minYear ? parseInt(filters.minYear) : undefined,
-      maxYear: filters.maxYear ? parseInt(filters.maxYear) : undefined,
-      minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
-      maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
-      transmission: filters.transmission,
-      fuelType: filters.fuelType
-    });
+  const applyFilters = async () => {
+    setLoading(true);
+    try {
+      const filtered = await supabaseService.searchVehicles({
+        brand: filters.brand,
+        model: filters.model,
+        minYear: filters.minYear ? parseInt(filters.minYear) : undefined,
+        maxYear: filters.maxYear ? parseInt(filters.maxYear) : undefined,
+        minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
+        maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
+        transmission: filters.transmission,
+        fuelType: filters.fuel_type
+      });
 
-    if (showMyVehicles && profile) {
-      setFilteredVehicles(filtered.filter(v => v.userId === profile.id));
-    } else {
-      setFilteredVehicles(filtered);
+      if (showMyVehicles && profile) {
+        setFilteredVehicles(filtered.filter(v => v.user_id === profile.id));
+      } else {
+        setFilteredVehicles(filtered);
+      }
+    } catch (error) {
+      console.error('Error applying filters:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,7 +84,7 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
       minPrice: '',
       maxPrice: '',
       transmission: '',
-      fuelType: ''
+      fuel_type: ''
     });
     loadVehicles();
   };
@@ -79,13 +94,16 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
       return;
     }
 
-    const result = await localStorageService.deleteVehicle(vehicleId);
-    if (result.success) {
+    setLoading(true);
+    try {
+      await supabaseService.deleteVehicle(vehicleId);
       loadVehicles();
       setSelectedVehicle(null);
-      alert('Vehículo eliminado exitosamente');
-    } else {
+    } catch (error) {
+      console.error('Error deleting vehicle:', error);
       alert('Error al eliminar el vehículo');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,12 +112,16 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
       return;
     }
 
-    const result = await localStorageService.registerVehicleForSale(vehicleId);
-    if (result.success) {
+    setLoading(true);
+    try {
+      await supabaseService.registerVehicleForSale(vehicleId);
       loadVehicles();
-      alert(result.message);
-    } else {
-      alert(result.message);
+      alert('Vehículo enviado para validación');
+    } catch (error) {
+      console.error('Error registering vehicle:', error);
+      alert('Error al registrar el vehículo');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -237,8 +259,8 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Combustible</label>
                   <select
-                    value={filters.fuelType}
-                    onChange={(e) => setFilters({ ...filters, fuelType: e.target.value })}
+                    value={filters.fuel_type}
+                    onChange={(e) => setFilters({ ...filters, fuel_type: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Todos</option>
@@ -328,22 +350,22 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                   {/* Badge de estado de venta */}
                   {showMyVehicles && (
                     <div className="absolute top-2 right-2">
-                      {vehicle.saleStatus === 'draft' && (
+                      {vehicle.status === 'draft' && (
                         <span className="px-3 py-1 bg-gray-500 text-white text-xs font-medium rounded-full">
                           📝 Borrador
                         </span>
                       )}
-                      {vehicle.saleStatus === 'pending_validation' && (
+                      {vehicle.status === 'pending_validation' && (
                         <span className="px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full animate-pulse">
                           ⏳ Validando
                         </span>
                       )}
-                      {vehicle.saleStatus === 'for_sale' && (
+                      {vehicle.status === 'approved' && (
                         <span className="px-3 py-1 bg-green-500 text-white text-xs font-medium rounded-full">
                           ✅ En Venta
                         </span>
                       )}
-                      {vehicle.saleStatus === 'rejected' && (
+                      {vehicle.status === 'rejected' && (
                         <span className="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
                           ❌ Rechazado
                         </span>
@@ -377,7 +399,7 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <Fuel className="w-4 h-4" />
-                      <span>{getFuelTypeLabel(vehicle.fuelType)}</span>
+                      <span>{getFuelTypeLabel(vehicle.fuel_type)}</span>
                     </div>
                   </div>
 
@@ -388,23 +410,23 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                   )}
 
                   {/* Mensaje de estado de validación */}
-                  {showMyVehicles && vehicle.saleStatus === 'pending_validation' && (
+                  {showMyVehicles && vehicle.status === 'pending_validation' && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <p className="text-xs text-yellow-800">
-                        <strong>⏳ Validando datos:</strong> {vehicle.validationMessage}
+                        <strong>⏳ Validando datos:</strong> Tu vehículo está siendo revisado por un administrador
                       </p>
                     </div>
                   )}
 
-                  {showMyVehicles && vehicle.saleStatus === 'rejected' && vehicle.validationMessage && (
+                  {showMyVehicles && vehicle.status === 'rejected' && vehicle.rejection_reason && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <p className="text-xs text-red-800">
-                        <strong>❌ Rechazado:</strong> {vehicle.validationMessage}
+                        <strong>❌ Rechazado:</strong> {vehicle.rejection_reason}
                       </p>
                     </div>
                   )}
 
-                  {showMyVehicles && vehicle.saleStatus === 'for_sale' && (
+                  {showMyVehicles && vehicle.status === 'approved' && (
                     <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-xs text-green-800">
                         <strong>✅ Aprobado:</strong> Tu vehículo está visible en el catálogo público
@@ -417,7 +439,7 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                     {showMyVehicles ? (
                       <>
                         {/* Botón de Registrar para Venta (solo si está en borrador) */}
-                        {vehicle.saleStatus === 'draft' && (
+                        {vehicle.status === 'draft' && (
                           <button
                             onClick={() => handleRegisterForSale(vehicle.id)}
                             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
@@ -519,7 +541,7 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <Fuel className="w-5 h-5 text-slate-600 mb-2" />
                     <p className="text-sm text-slate-600">Combustible</p>
-                    <p className="font-semibold text-slate-900">{getFuelTypeLabel(selectedVehicle.fuelType)}</p>
+                    <p className="font-semibold text-slate-900">{getFuelTypeLabel(selectedVehicle.fuel_type)}</p>
                   </div>
                 </div>
               </div>
@@ -542,7 +564,7 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Email</p>
-                      <p className="font-medium text-slate-900">{selectedVehicle.userEmail}</p>
+                      <p className="font-medium text-slate-900">{selectedVehicle.user_email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -551,7 +573,7 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Teléfono</p>
-                      <p className="font-medium text-slate-900">{selectedVehicle.userPhone}</p>
+                      <p className="font-medium text-slate-900">{selectedVehicle.user_phone}</p>
                     </div>
                   </div>
                 </div>
