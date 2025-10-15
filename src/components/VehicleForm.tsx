@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { localStorageService, Vehicle } from '../lib/localStorageService';
 import { Car, Upload, X, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 
@@ -10,7 +10,7 @@ interface VehicleFormProps {
 }
 
 export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: VehicleFormProps) {
-  const { user } = useSimpleAuth();
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -103,7 +103,7 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
       setError('El precio es obligatorio y debe ser mayor a 0');
       return;
     }
-    if (!user?.phone) {
+    if (!profile?.phone) {
       setError('Debe tener un teléfono de contacto configurado');
       return;
     }
@@ -127,9 +127,9 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
           transmission: formData.transmission,
           fuelType: formData.fuelType,
           images: images,
-          userEmail: user!.email,
-          userName: user!.fullName,
-          userPhone: user!.phone
+          userEmail: profile!.email,
+          userName: profile!.full_name,
+          userPhone: profile!.phone
         });
 
         if (result.success) {
@@ -143,10 +143,10 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
       } else {
         // Crear nuevo vehículo (CA1)
         const result = await localStorageService.createVehicle({
-          userId: user!.id,
-          userEmail: user!.email,
-          userName: user!.fullName,
-          userPhone: user!.phone,
+          userId: profile!.id,
+          userEmail: profile!.email,
+          userName: profile!.full_name,
+          userPhone: profile!.phone,
           brand: formData.brand.trim(),
           model: formData.model.trim(),
           year: formData.year,
@@ -399,8 +399,8 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
               Los interesados podrán contactarte a través de:
             </p>
             <ul className="text-sm text-slate-700 space-y-1">
-              <li>📧 Email: {user?.email}</li>
-              <li>📱 Teléfono: {user?.phone}</li>
+              <li>📧 Email: {profile?.email}</li>
+              <li>📱 Teléfono: {profile?.phone}</li>
             </ul>
           </div>
 

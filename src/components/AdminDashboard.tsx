@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { localStorageService, LocalUser, Vehicle } from '../lib/localStorageService';
 import { Shield, LogOut, Users, Car, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 
 type AdminView = 'dashboard' | 'pending-users' | 'pending-vehicles' | 'all-users' | 'all-vehicles';
 
 export default function AdminDashboard() {
-  const { user, logout } = useSimpleAuth();
+  const { profile, signOut } = useAuth();
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [pendingUsers, setPendingUsers] = useState<LocalUser[]>([]);
   const [pendingVehicles, setPendingVehicles] = useState<Vehicle[]>([]);
@@ -34,9 +34,9 @@ export default function AdminDashboard() {
   };
 
   const handleApproveUser = async (userId: string) => {
-    if (!user?.id) return;
+    if (!profile?.id) return;
     setLoading(true);
-    const result = await localStorageService.approveUser(userId, user.id);
+    const result = await localStorageService.approveUser(userId, profile.id);
     if (result.success) {
       alert('✅ Usuario aprobado exitosamente');
       loadData();
@@ -47,12 +47,12 @@ export default function AdminDashboard() {
   };
 
   const handleRejectUser = async (userId: string) => {
-    if (!user?.id) return;
+    if (!profile?.id) return;
     const confirmed = window.confirm('¿Estás seguro de rechazar este usuario?');
     if (!confirmed) return;
 
     setLoading(true);
-    const result = await localStorageService.rejectUser(userId, user.id);
+    const result = await localStorageService.rejectUser(userId, profile.id);
     if (result.success) {
       alert('Usuario rechazado');
       loadData();
@@ -63,9 +63,9 @@ export default function AdminDashboard() {
   };
 
   const handleApproveVehicle = async (vehicleId: string) => {
-    if (!user?.id) return;
+    if (!profile?.id) return;
     setLoading(true);
-    const result = await localStorageService.adminApproveVehicle(vehicleId, user.id);
+    const result = await localStorageService.adminApproveVehicle(vehicleId, profile.id);
     if (result.success) {
       alert('✅ Vehículo aprobado y ahora visible en el catálogo público');
       loadData();
@@ -76,12 +76,12 @@ export default function AdminDashboard() {
   };
 
   const handleRejectVehicle = async (vehicleId: string) => {
-    if (!user?.id) return;
+    if (!profile?.id) return;
     const reason = window.prompt('Ingresa el motivo del rechazo:');
     if (!reason) return;
 
     setLoading(true);
-    const result = await localStorageService.adminRejectVehicle(vehicleId, user.id, reason);
+    const result = await localStorageService.adminRejectVehicle(vehicleId, profile.id, reason);
     if (result.success) {
       alert('Vehículo rechazado');
       loadData();
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    logout();
+    signOut();
   };
 
   const renderDashboard = () => (
@@ -333,7 +333,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-slate-900">{user?.fullName}</p>
+                <p className="text-sm font-medium text-slate-900">{profile?.full_name}</p>
                 <p className="text-xs text-slate-600">Administrador</p>
               </div>
               <button

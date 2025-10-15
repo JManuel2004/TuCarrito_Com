@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { localStorageService, Vehicle } from '../lib/localStorageService';
 import { ArrowLeft, Search, Filter, Car, Calendar, Gauge, Fuel, Cog, Phone, Mail, Edit2, Trash2, Eye, CheckCircle } from 'lucide-react';
 
@@ -10,7 +10,7 @@ interface VehicleListProps {
 }
 
 export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = false }: VehicleListProps) {
-  const { user } = useSimpleAuth();
+  const { profile } = useAuth();
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -28,11 +28,11 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
 
   useEffect(() => {
     loadVehicles();
-  }, [showMyVehicles, user]);
+  }, [showMyVehicles, profile]);
 
   const loadVehicles = () => {
-    if (showMyVehicles && user) {
-      const myVehicles = localStorageService.getUserVehicles(user.id);
+    if (showMyVehicles && profile) {
+      const myVehicles = localStorageService.getUserVehicles(profile.id);
       setFilteredVehicles(myVehicles);
     } else {
       // En el catálogo público, solo mostrar vehículos aprobados para venta
@@ -53,8 +53,8 @@ export default function VehicleList({ onBack, onEditVehicle, showMyVehicles = fa
       fuelType: filters.fuelType
     });
 
-    if (showMyVehicles && user) {
-      setFilteredVehicles(filtered.filter(v => v.userId === user.id));
+    if (showMyVehicles && profile) {
+      setFilteredVehicles(filtered.filter(v => v.userId === profile.id));
     } else {
       setFilteredVehicles(filtered);
     }
