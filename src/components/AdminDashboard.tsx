@@ -32,11 +32,11 @@ export default function AdminDashboard() {
         const vehicles = await supabaseService.getPendingVehicles();
         setPendingVehicles(vehicles);
       }
-      if (currentView === 'all-users') {
+      if (currentView === 'all-users' || currentView === 'dashboard') {
         const users = await supabaseService.getAllUsers();
         setAllUsers(users);
       }
-      if (currentView === 'all-vehicles') {
+      if (currentView === 'all-vehicles' || currentView === 'dashboard') {
         const vehicles = await supabaseService.getAllVehicles();
         setAllVehicles(vehicles);
       }
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
               <Car className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{allVehicles.filter(v => v.status === 'approved').length}</p>
+              <p className="text-2xl font-bold text-slate-900">{allVehicles.filter(v => v.validation_status === 'approved').length}</p>
               <p className="text-sm text-slate-600">Vehículos Publicados</p>
             </div>
           </div>

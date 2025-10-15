@@ -289,10 +289,14 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ej: 45000000"
+                  placeholder="Ej: 200000000"
                   min="0"
-                  step="100000"
+                  max="9999999999"
+                  step="1000000"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Ingrese el precio en pesos colombianos (COP)
+                </p>
               </div>
 
               <div>
