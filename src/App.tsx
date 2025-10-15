@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import RegisterForm from './components/RegisterForm';
 import LoginForm from './components/LoginForm';
-import Dashboard from './components/Dashboard';
+import SimpleDashboard from './components/SimpleDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import { Car, UserPlus, LogIn } from 'lucide-react';
 
@@ -28,7 +28,7 @@ function AuthPage() {
 
   // Si es usuario aprobado, mostrar dashboard normal
   if (profile && profile.validation_status === 'approved') {
-    return <Dashboard />;
+    return <SimpleDashboard />;
   }
 
   return (
