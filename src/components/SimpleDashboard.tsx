@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
-import { localStorageService, Vehicle } from '../lib/localStorageService';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import * as supabaseService from '../lib/supabaseService';
+import type { Vehicle } from '../lib/supabaseService';
 import { Car, LogOut, User, CheckCircle, Plus, Search, Settings, List } from 'lucide-react';
 import VehicleForm from './VehicleForm';
 import VehicleList from './VehicleList';
@@ -8,27 +9,30 @@ import VehicleList from './VehicleList';
 type ViewType = 'dashboard' | 'publish' | 'catalog' | 'my-vehicles' | 'edit-vehicle';
 
 export default function SimpleDashboard() {
-  const { user, logout } = useSimpleAuth();
+  const { profile, user, signOut } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
   const [myVehiclesCount, setMyVehiclesCount] = useState(0);
 
-  React.useEffect(() => {
-    if (user) {
-      const vehicles = localStorageService.getUserVehicles(user.id);
-      setMyVehiclesCount(vehicles.length);
-    }
+  useEffect(() => {
+    const loadUserVehicles = async () => {
+      if (user?.id) {
+        const vehicles = await supabaseService.getUserVehicles(user.id);
+        setMyVehiclesCount(vehicles.length);
+      }
+    };
+    loadUserVehicles();
   }, [user, currentView]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
   };
 
   const getUserTypeLabel = () => {
-    switch (user?.userType) {
+    switch (profile?.user_type) {
       case 'buyer': return 'Comprador';
       case 'seller': return 'Vendedor';
-      case 'both': return 'Comprador y Vendedor';
+      case 'admin': return 'Administrador';
       default: return 'Usuario';
     }
   };
@@ -113,13 +117,13 @@ export default function SimpleDashboard() {
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-slate-900 mb-1">
-                Bienvenido, {user?.fullName}
+                Bienvenido, {profile?.full_name}
               </h2>
               <p className="text-slate-600 mb-2">
-                Email: {user?.email}
+                Email: {profile?.email}
               </p>
               <p className="text-slate-600 mb-2">
-                Teléfono: {user?.phone}
+                Teléfono: {profile?.phone}
               </p>
               <p className="text-slate-600">
                 Tipo de usuario: <span className="font-medium">{getUserTypeLabel()}</span>
@@ -151,7 +155,7 @@ export default function SimpleDashboard() {
             </p>
           </div>
 
-          {(user?.userType === 'seller' || user?.userType === 'both') && (
+          {(profile?.user_type === 'seller' || profile?.user_type === 'admin') && (
             <>
               <div 
                 onClick={() => setCurrentView('publish')}
@@ -185,7 +189,7 @@ export default function SimpleDashboard() {
             </>
           )}
 
-          {user?.userType === 'buyer' && (
+          {profile?.user_type === 'buyer' && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow cursor-pointer">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-purple-50 rounded-lg">
