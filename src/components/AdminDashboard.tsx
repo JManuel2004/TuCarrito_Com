@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { localStorageService, LocalUser, Vehicle } from '../lib/localStorageService';
+import { UserProfile } from '../lib/supabase';
+import * as supabaseService from '../lib/supabaseService';
 import { Shield, LogOut, Users, Car, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 
 type AdminView = 'dashboard' | 'pending-users' | 'pending-vehicles' | 'all-users' | 'all-vehicles';
@@ -8,71 +9,86 @@ type AdminView = 'dashboard' | 'pending-users' | 'pending-vehicles' | 'all-users
 export default function AdminDashboard() {
   const { profile, signOut } = useAuth();
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
-  const [pendingUsers, setPendingUsers] = useState<LocalUser[]>([]);
-  const [pendingVehicles, setPendingVehicles] = useState<Vehicle[]>([]);
-  const [allUsers, setAllUsers] = useState<LocalUser[]>([]);
-  const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
+  const [pendingVehicles, setPendingVehicles] = useState<supabaseService.Vehicle[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [allVehicles, setAllVehicles] = useState<supabaseService.Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadData();
   }, [currentView]);
 
-  const loadData = () => {
-    if (currentView === 'pending-users' || currentView === 'dashboard') {
-      setPendingUsers(localStorageService.getPendingUsers());
-    }
-    if (currentView === 'pending-vehicles' || currentView === 'dashboard') {
-      setPendingVehicles(localStorageService.getPendingVehicles());
-    }
-    if (currentView === 'all-users') {
-      setAllUsers(localStorageService.getAllUsers());
-    }
-    if (currentView === 'all-vehicles') {
-      setAllVehicles(localStorageService.getAllActiveVehicles());
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      if (currentView === 'pending-users' || currentView === 'dashboard') {
+        const users = await supabaseService.getPendingUsers();
+        setPendingUsers(users);
+      }
+      if (currentView === 'pending-vehicles' || currentView === 'dashboard') {
+        const vehicles = await supabaseService.getPendingVehicles();
+        setPendingVehicles(vehicles);
+      }
+      if (currentView === 'all-users') {
+        const users = await supabaseService.getAllUsers();
+        setAllUsers(users);
+      }
+      if (currentView === 'all-vehicles') {
+        const vehicles = await supabaseService.getAllVehicles();
+        setAllVehicles(vehicles);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar datos');
+      console.error('Error loading data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleApproveUser = async (userId: string) => {
-    if (!profile?.id) return;
     setLoading(true);
-    const result = await localStorageService.approveUser(userId, profile.id);
-    if (result.success) {
+    try {
+      await supabaseService.approveUser(userId);
       alert('✅ Usuario aprobado exitosamente');
       loadData();
-    } else {
-      alert('❌ Error: ' + result.message);
+    } catch (err: any) {
+      alert('❌ Error: ' + (err.message || 'Error al aprobar usuario'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRejectUser = async (userId: string) => {
-    if (!profile?.id) return;
     const confirmed = window.confirm('¿Estás seguro de rechazar este usuario?');
     if (!confirmed) return;
 
     setLoading(true);
-    const result = await localStorageService.rejectUser(userId, profile.id);
-    if (result.success) {
+    try {
+      await supabaseService.rejectUser(userId);
       alert('Usuario rechazado');
       loadData();
-    } else {
-      alert('❌ Error: ' + result.message);
+    } catch (err: any) {
+      alert('❌ Error: ' + (err.message || 'Error al rechazar usuario'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleApproveVehicle = async (vehicleId: string) => {
     if (!profile?.id) return;
     setLoading(true);
-    const result = await localStorageService.adminApproveVehicle(vehicleId, profile.id);
-    if (result.success) {
+    try {
+      await supabaseService.approveVehicle(vehicleId, profile.id);
       alert('✅ Vehículo aprobado y ahora visible en el catálogo público');
       loadData();
-    } else {
-      alert('❌ Error: ' + result.message);
+    } catch (err: any) {
+      alert('❌ Error: ' + (err.message || 'Error al aprobar vehículo'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRejectVehicle = async (vehicleId: string) => {
@@ -81,14 +97,15 @@ export default function AdminDashboard() {
     if (!reason) return;
 
     setLoading(true);
-    const result = await localStorageService.adminRejectVehicle(vehicleId, profile.id, reason);
-    if (result.success) {
+    try {
+      await supabaseService.rejectVehicle(vehicleId, profile.id, reason);
       alert('Vehículo rechazado');
       loadData();
-    } else {
-      alert('❌ Error: ' + result.message);
+    } catch (err: any) {
+      alert('❌ Error: ' + (err.message || 'Error al rechazar vehículo'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleLogout = () => {
@@ -129,7 +146,7 @@ export default function AdminDashboard() {
               <Users className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{localStorageService.getAllUsers().length}</p>
+              <p className="text-2xl font-bold text-slate-900">{allUsers.length}</p>
               <p className="text-sm text-slate-600">Total Usuarios</p>
             </div>
           </div>
@@ -141,7 +158,7 @@ export default function AdminDashboard() {
               <Car className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{localStorageService.getVehiclesForSale().length}</p>
+              <p className="text-2xl font-bold text-slate-900">{allVehicles.filter(v => v.status === 'approved').length}</p>
               <p className="text-sm text-slate-600">Vehículos Publicados</p>
             </div>
           </div>
@@ -206,21 +223,21 @@ export default function AdminDashboard() {
             <div key={pendingUser.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{pendingUser.fullName}</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{pendingUser.full_name}</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-slate-600">Email: <span className="font-medium text-slate-900">{pendingUser.email}</span></p>
                       <p className="text-slate-600">Teléfono: <span className="font-medium text-slate-900">{pendingUser.phone}</span></p>
                     </div>
                     <div>
-                      <p className="text-slate-600">ID: <span className="font-medium text-slate-900">{pendingUser.idNumber}</span></p>
+                      <p className="text-slate-600">ID: <span className="font-medium text-slate-900">{pendingUser.id_number}</span></p>
                       <p className="text-slate-600">Tipo: <span className="font-medium text-slate-900">
-                        {pendingUser.userType === 'buyer' ? 'Comprador' : pendingUser.userType === 'seller' ? 'Vendedor' : 'Ambos'}
+                        {pendingUser.user_type === 'buyer' ? 'Comprador' : pendingUser.user_type === 'seller' ? 'Vendedor' : 'Ambos'}
                       </span></p>
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
-                    Registrado: {new Date(pendingUser.createdAt).toLocaleString()}
+                    Registrado: {new Date(pendingUser.created_at).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex gap-2 ml-4">
@@ -285,9 +302,9 @@ export default function AdminDashboard() {
                   ${vehicle.price.toLocaleString()}
                 </p>
                 <div className="space-y-2 text-sm mb-4">
-                  <p className="text-slate-600">Vendedor: <span className="font-medium">{vehicle.userName}</span></p>
-                  <p className="text-slate-600">Email: <span className="font-medium">{vehicle.userEmail}</span></p>
-                  <p className="text-slate-600">Teléfono: <span className="font-medium">{vehicle.userPhone}</span></p>
+                  <p className="text-slate-600">Vendedor: <span className="font-medium">{vehicle.user_name}</span></p>
+                  <p className="text-slate-600">Email: <span className="font-medium">{vehicle.user_email}</span></p>
+                  <p className="text-slate-600">Teléfono: <span className="font-medium">{vehicle.user_phone}</span></p>
                   <p className="text-slate-600">Kilometraje: <span className="font-medium">{vehicle.mileage.toLocaleString()} km</span></p>
                   <p className="text-slate-600">Transmisión: <span className="font-medium">{vehicle.transmission === 'manual' ? 'Manual' : 'Automática'}</span></p>
                 </div>

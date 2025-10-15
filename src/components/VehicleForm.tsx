@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { localStorageService, Vehicle } from '../lib/localStorageService';
+import * as supabaseService from '../lib/supabaseService';
 import { Car, Upload, X, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 
 interface VehicleFormProps {
-  vehicleToEdit?: Vehicle | null;
+  vehicleToEdit?: supabaseService.Vehicle | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -24,7 +24,7 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
     description: '',
     mileage: '',
     transmission: 'manual' as 'manual' | 'automatic',
-    fuelType: 'gasoline' as 'gasoline' | 'diesel' | 'electric' | 'hybrid'
+    fuel_type: 'gasoline' as 'gasoline' | 'diesel' | 'electric' | 'hybrid'
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -39,11 +39,36 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
         description: vehicleToEdit.description,
         mileage: vehicleToEdit.mileage.toString(),
         transmission: vehicleToEdit.transmission,
-        fuelType: vehicleToEdit.fuelType
+        fuel_type: vehicleToEdit.fuel_type
       });
       setImages(vehicleToEdit.images);
     }
   }, [vehicleToEdit]);
+
+  // Funciones auxiliares para imágenes
+  const validateImageFile = (file: File): { valid: boolean; error?: string } => {
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+      return { valid: false, error: 'Solo se permiten imágenes JPG, PNG o WEBP' };
+    }
+
+    if (file.size > maxSize) {
+      return { valid: false, error: 'La imagen no puede superar los 2MB' };
+    }
+
+    return { valid: true };
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -63,14 +88,14 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
       const file = files[i];
       
       // Validar imagen
-      const validation = localStorageService.validateImageFile(file);
+      const validation = validateImageFile(file);
       if (!validation.valid) {
         setImageError(validation.error || 'Error al validar imagen');
         continue;
       }
 
       try {
-        const base64 = await localStorageService.fileToBase64(file);
+        const base64 = await fileToBase64(file);
         newImages.push(base64);
       } catch (err) {
         setImageError('Error al procesar la imagen');
@@ -117,7 +142,7 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
     try {
       if (vehicleToEdit) {
         // Editar vehículo existente (CA4)
-        const result = await localStorageService.updateVehicle(vehicleToEdit.id, {
+        await supabaseService.updateVehicle(vehicleToEdit.id, {
           brand: formData.brand.trim(),
           model: formData.model.trim(),
           year: formData.year,
@@ -125,50 +150,39 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
           description: formData.description.trim(),
           mileage: parseFloat(formData.mileage) || 0,
           transmission: formData.transmission,
-          fuelType: formData.fuelType,
-          images: images,
-          userEmail: profile!.email,
-          userName: profile!.full_name,
-          userPhone: profile!.phone
-        });
-
-        if (result.success) {
-          setSuccess('Vehículo actualizado exitosamente');
-          setTimeout(() => {
-            onSuccess();
-          }, 1500);
-        } else {
-          setError(result.message);
-        }
-      } else {
-        // Crear nuevo vehículo (CA1)
-        const result = await localStorageService.createVehicle({
-          userId: profile!.id,
-          userEmail: profile!.email,
-          userName: profile!.full_name,
-          userPhone: profile!.phone,
-          brand: formData.brand.trim(),
-          model: formData.model.trim(),
-          year: formData.year,
-          price: parseFloat(formData.price),
-          description: formData.description.trim(),
-          mileage: parseFloat(formData.mileage) || 0,
-          transmission: formData.transmission,
-          fuelType: formData.fuelType,
+          fuel_type: formData.fuel_type,
           images: images
         });
 
-        if (result.success) {
-          setSuccess('¡Vehículo publicado exitosamente!');
-          setTimeout(() => {
-            onSuccess();
-          }, 1500);
-        } else {
-          setError(result.message);
-        }
+        setSuccess('Vehículo actualizado exitosamente');
+        setTimeout(() => {
+          onSuccess();
+        }, 1500);
+      } else {
+        // Crear nuevo vehículo (CA1)
+        await supabaseService.createVehicle({
+          user_id: profile!.id,
+          user_email: profile!.email,
+          user_name: profile!.full_name,
+          user_phone: profile!.phone,
+          brand: formData.brand.trim(),
+          model: formData.model.trim(),
+          year: formData.year,
+          price: parseFloat(formData.price),
+          description: formData.description.trim(),
+          mileage: parseFloat(formData.mileage) || 0,
+          transmission: formData.transmission,
+          fuel_type: formData.fuel_type,
+          images: images
+        });
+
+        setSuccess('¡Vehículo publicado exitosamente!');
+        setTimeout(() => {
+          onSuccess();
+        }, 1500);
       }
-    } catch (err) {
-      setError('Error al procesar la solicitud');
+    } catch (err: any) {
+      setError(err.message || 'Error al procesar la solicitud');
     } finally {
       setLoading(false);
     }
@@ -314,8 +328,8 @@ export default function VehicleForm({ vehicleToEdit, onSuccess, onCancel }: Vehi
                   Tipo de Combustible
                 </label>
                 <select
-                  value={formData.fuelType}
-                  onChange={(e) => setFormData({ ...formData, fuelType: e.target.value as any })}
+                  value={formData.fuel_type}
+                  onChange={(e) => setFormData({ ...formData, fuel_type: e.target.value as any })}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="gasoline">Gasolina</option>
