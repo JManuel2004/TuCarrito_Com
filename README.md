@@ -379,47 +379,9 @@ localStorage.removeItem('tucarrito_vehicles');
 location.reload();
 ```
 
-### El login no funciona
 
-1. Verificar que el usuario esté aprobado por un admin
-2. Revisar la consola del navegador para errores
-3. Limpiar localStorage y recargar
 
----
 
-## 👥 Equipo
 
-**Proyecto:** proyecto-final-thebeans  
-**Organización:** Computacion-2-2025  
-**Curso:** Computación 2 - 2025
 
----
 
-## 📄 Licencia
-
-Este proyecto es parte de un trabajo académico para el curso de Computación 2.
-
----
-
-## 📞 Soporte
-
-Para problemas o preguntas:
-
-1. Revisa la documentación en los archivos `.md`
-2. Revisa los issues en GitHub
-3. Contacta al equipo de desarrollo
-
----
-
-## 🙏 Agradecimientos
-
-- React Team por la increíble librería
-- Vite por la velocidad de desarrollo
-- TailwindCSS por el diseño rápido
-- Lucide por los iconos
-
----
-
-**Hecho con ❤️ por el equipo TheBeans**
-
-**Última actualización:** 14 de octubre de 2025
